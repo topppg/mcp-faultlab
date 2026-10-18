@@ -65,3 +65,27 @@ def test_stale_without_snapshot_is_explicit_failure():
     result = h.invoke(Call("1", "read"))
     assert result.failure == "no_stale_result_available"
     assert h.backend.calls == 1
+
+
+def test_lost_response_does_not_undo_execution():
+    h = harness("response_loss")
+    outcome = h.invoke(Call("1", "write"))
+    assert outcome.result is None
+    assert outcome.uncertain is True
+    assert outcome.failure == "response_lost"
+    assert h.backend.calls == 1
+
+
+def test_duplicate_is_execution_not_duplicate_jsonrpc_response():
+    h = harness("duplicate_execution")
+    outcome = h.invoke(Call("1", "write"))
+    assert outcome.ok
+    assert h.backend.calls == 2
+    assert len([e for e in h.events if e["kind"] == "outcome"]) == 1
+
+
+def test_crash_is_persistent_and_has_no_side_effect():
+    h = harness("crash")
+    assert h.invoke(Call("1", "write")).failure == "transport_closed"
+    assert h.invoke(Call("2", "read")).failure == "transport_closed"
+    assert h.backend.calls == 0

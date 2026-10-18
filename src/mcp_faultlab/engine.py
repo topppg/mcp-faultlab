@@ -43,6 +43,7 @@ class Harness:
         self.events: list[dict[str, Any]] = []
         self.ids: set[str] = set()
         self.previous: dict[str, dict[str, Any]] = {}
+        self.crashed = False
 
     def emit(self, kind: str, **data: Any) -> None:
         self.events.append({"seq": len(self.events), "time_ms": self.clock.now_ms,
@@ -57,7 +58,12 @@ class Harness:
         if rule:
             self.clock.advance(rule.delay_ms)
             self.emit("fault", call_id=call.id, rule=rule.name, fault=rule.fault)
-        if rule and rule.fault in {"tool_error", "permission_denied", "rate_limit"}:
+        if self.crashed:
+            outcome = Outcome(failure="transport_closed", uncertain=False)
+        elif rule and rule.fault == "crash":
+            self.crashed = True
+            outcome = Outcome(failure="transport_closed", uncertain=False)
+        elif rule and rule.fault in {"tool_error", "permission_denied", "rate_limit"}:
             outcome = Outcome(result=tool_error(rule.fault, f"Injected {rule.fault}",
                                                 retry_after_ms=rule.delay_ms))
         elif rule and rule.fault == "timeout":
@@ -76,6 +82,16 @@ class Harness:
                     outcome = Outcome(result=old)
                 else:
                     outcome = Outcome(failure="no_stale_result_available", uncertain=True)
+        elif rule and rule.fault == "response_loss":
+            actual = self._execute(call)
+            self.emit("response_discarded", call_id=call.id, upstream_ok=actual.ok)
+            outcome = Outcome(failure="response_lost", uncertain=True)
+        elif rule and rule.fault == "duplicate_execution":
+            first = self._execute(call)
+            if first.failure is None:
+                outcome = self._execute(call)
+            else:
+                outcome = first
         elif rule:
             raise NotImplementedError(f"fault not implemented: {rule.fault}")
         else:
