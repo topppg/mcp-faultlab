@@ -12,6 +12,9 @@ license = {text = "Apache-2.0"}
 authors = [{name = "Giorgio Sarno"}]
 dependencies = []
 
+[project.scripts]
+mcp-faultlab = "mcp_faultlab.cli:main"
+
 [dependency-groups]
 dev = ["pytest>=8,<9", "ruff>=0.9,<1"]
 
