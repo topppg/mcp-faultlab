@@ -7,6 +7,7 @@ from typing import Any, BinaryIO
 
 from .engine import Harness, ProtocolError
 from .ledger import TOOLS, Ledger
+from .http_transport import JsonHttpClient
 from .model import Call
 from .scenario import Scenario
 from .transport import MAX_FRAME_BYTES, PROTOCOL_VERSION, StdioClient
@@ -21,7 +22,7 @@ def rpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
 
 
 class ToolEndpoint:
-    def __init__(self, scenario: Scenario, upstream: StdioClient | None = None):
+    def __init__(self, scenario: Scenario, upstream: StdioClient | JsonHttpClient | None = None):
         self.upstream = upstream
         self.harness = Harness(scenario, upstream or Ledger())
         self.initialized = False
