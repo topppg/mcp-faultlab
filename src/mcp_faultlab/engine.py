@@ -49,6 +49,10 @@ class Harness:
         self.events.append({"seq": len(self.events), "time_ms": self.clock.now_ms,
                             "kind": kind, **copy.deepcopy(data)})
 
+    def approve(self, call: Call) -> None:
+        """Record an approval from the trusted test driver, bound to exact arguments."""
+        self.emit("approval", call=call.to_dict())
+
     def invoke(self, call: Call) -> Outcome:
         if call.id in self.ids:
             raise ValueError(f"duplicate call id: {call.id}")

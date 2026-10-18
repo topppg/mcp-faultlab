@@ -86,6 +86,9 @@ class Scenario:
         contracts = d.get("contracts", {})
         if not isinstance(contracts, dict):
             raise ScenarioError("contracts must be an object")
+        from .contracts import validate_contracts
+
+        validate_contracts(contracts)
         return cls(string(d.get("name"), "scenario.name"), parsed, contracts)
 
     @classmethod
