@@ -14,6 +14,12 @@ class TransportError(RuntimeError):
     """No reliable response was received; upstream work might have committed."""
 
 
+class ProtocolError(TransportError):
+    def __init__(self, error: dict[str, Any]):
+        super().__init__("upstream_protocol_error")
+        self.error = error
+
+
 class Backend(Protocol):
     def execute(self, call: Call) -> dict[str, Any]: ...
 
@@ -23,6 +29,7 @@ class Outcome:
     result: dict[str, Any] | None = None
     failure: str | None = None
     uncertain: bool = False
+    protocol_error: dict[str, Any] | None = None
 
     @property
     def ok(self) -> bool:
@@ -107,6 +114,8 @@ class Harness:
         self.emit("dispatch", call_id=call.id)
         try:
             result = self.backend.execute(call)
+        except ProtocolError as exc:
+            return Outcome(failure="upstream_protocol_error", protocol_error=exc.error)
         except TransportError as exc:
             return Outcome(failure=str(exc), uncertain=True)
         if not isinstance(result, dict):
