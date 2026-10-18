@@ -78,3 +78,40 @@ def test_http_deadline(endpoint):
 def test_only_literal_loopback_without_credentials(url):
     with pytest.raises(ValueError):
         JsonHttpClient(url)
+
+
+@pytest.mark.parametrize("protocol", ["HTTP/1.0", "HTTP/1.1"])
+def test_deadline_interrupts_slow_drip_body_even_when_response_owns_socket(protocol):
+    class Drip(BaseHTTPRequestHandler):
+        protocol_version = protocol
+
+        def do_POST(self):
+            self.rfile.read(int(self.headers["Content-Length"]))
+            body = b'{"jsonrpc":"2.0","id":1,"result":{"ok":true}}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            try:
+                for byte in body:
+                    self.wfile.write(bytes([byte]))
+                    self.wfile.flush()
+                    time.sleep(0.025)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        def log_message(self, *_):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Drip)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        start = time.monotonic()
+        with pytest.raises(TransportError):
+            JsonHttpClient(f"http://127.0.0.1:{server.server_port}/mcp", timeout=0.1).request("x")
+        assert time.monotonic() - start < 0.6
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=1)
