@@ -10,8 +10,15 @@ from .jsonutil import loads, validate_value
 
 FAULTS = frozenset(
     {
-        "tool_error", "permission_denied", "rate_limit", "timeout", "malformed",
-        "stale", "response_loss", "duplicate_execution", "crash",
+        "tool_error",
+        "permission_denied",
+        "rate_limit",
+        "timeout",
+        "malformed",
+        "stale",
+        "response_loss",
+        "duplicate_execution",
+        "crash",
     }
 )
 
@@ -50,7 +57,9 @@ class Rule:
 
     @classmethod
     def parse(cls, raw: Any) -> Rule:
-        d = fields(raw, {"name", "tool", "occurrence", "fault", "arguments", "value", "delay_ms"}, "rule")
+        d = fields(
+            raw, {"name", "tool", "occurrence", "fault", "arguments", "value", "delay_ms"}, "rule"
+        )
         name = string(d.get("name"), "rule.name")
         fault = string(d.get("fault"), "rule.fault")
         if fault not in FAULTS:
@@ -58,9 +67,15 @@ class Rule:
         args = d.get("arguments", {})
         if not isinstance(args, dict):
             raise ScenarioError("rule.arguments: expected object")
-        return cls(name, string(d.get("tool", "*"), "rule.tool"),
-                   integer(d.get("occurrence", 1), "rule.occurrence", 1), fault,
-                   args, d.get("value"), integer(d.get("delay_ms", 0), "rule.delay_ms"))
+        return cls(
+            name,
+            string(d.get("tool", "*"), "rule.tool"),
+            integer(d.get("occurrence", 1), "rule.occurrence", 1),
+            fault,
+            args,
+            d.get("value"),
+            integer(d.get("delay_ms", 0), "rule.delay_ms"),
+        )
 
 
 @dataclass(frozen=True)

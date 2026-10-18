@@ -22,10 +22,30 @@ def test_reference_server_real_mcp_lifecycle():
 def test_proxy_roundtrip_and_lost_response_preserve_trace(tmp_path):
     scenario = tmp_path / "scenario.json"
     trace = tmp_path / "trace.json"
-    scenario.write_text(json.dumps({"schema_version": 1, "name": "loss", "rules": [
-        {"name": "drop", "tool": "ledger.charge", "fault": "response_loss"}]}))
-    command = [sys.executable, "-m", "mcp_faultlab", "proxy", "--scenario", str(scenario),
-               "--trace", str(trace), "--", sys.executable, "-m", "mcp_faultlab", "reference-server"]
+    scenario.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "name": "loss",
+                "rules": [{"name": "drop", "tool": "ledger.charge", "fault": "response_loss"}],
+            }
+        )
+    )
+    command = [
+        sys.executable,
+        "-m",
+        "mcp_faultlab",
+        "proxy",
+        "--scenario",
+        str(scenario),
+        "--trace",
+        str(trace),
+        "--",
+        sys.executable,
+        "-m",
+        "mcp_faultlab",
+        "reference-server",
+    ]
     with StdioClient(command) as client:
         client.initialize()
         assert len(client.request("tools/list")["tools"]) == 3
@@ -39,7 +59,16 @@ def test_proxy_roundtrip_and_lost_response_preserve_trace(tmp_path):
 
 def test_endpoint_requires_handshake_and_rejects_wrong_version():
     endpoint = ToolEndpoint(Scenario("test"))
-    assert endpoint.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["error"]["code"] == -32002
-    error = endpoint.handle({"jsonrpc": "2.0", "id": 2, "method": "initialize",
-                             "params": {"protocolVersion": "2026-07-28"}})
+    assert (
+        endpoint.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})["error"]["code"]
+        == -32002
+    )
+    error = endpoint.handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "initialize",
+            "params": {"protocolVersion": "2026-07-28"},
+        }
+    )
     assert error["error"]["code"] == -32602

@@ -21,20 +21,27 @@ def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def loads(value: str | bytes) -> Any:
-    return json.loads(value, parse_constant=_constant, object_pairs_hook=_pairs)
+    try:
+        decoded = json.loads(value, parse_constant=_constant, object_pairs_hook=_pairs)
+        validate_value(decoded)
+        return decoded
+    except RecursionError as exc:
+        raise ValueError("JSON exceeds supported nesting depth") from exc
 
 
-def validate_value(value: Any) -> None:
+def validate_value(value: Any, depth: int = 0) -> None:
+    if depth > 100:
+        raise ValueError("JSON exceeds supported nesting depth")
     if value is None or type(value) in (str, bool, int):
         return
     if type(value) is float and math.isfinite(value):
         return
     if isinstance(value, list):
         for item in value:
-            validate_value(item)
+            validate_value(item, depth + 1)
         return
     if isinstance(value, dict) and all(isinstance(key, str) for key in value):
         for item in value.values():
-            validate_value(item)
+            validate_value(item, depth + 1)
         return
     raise ValueError("expected JSON-native values with finite numbers and string object keys")

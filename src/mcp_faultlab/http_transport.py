@@ -26,9 +26,17 @@ class JsonHttpClient:
             loopback = ipaddress.ip_address(parsed.hostname or "").is_loopback
         except ValueError:
             loopback = False
-        if (parsed.scheme != "http" or not loopback or parsed.username or parsed.password
-            or parsed.fragment or parsed.query):
-            raise ValueError("HTTP upstream requires a literal loopback http URL without credentials/query")
+        if (
+            parsed.scheme != "http"
+            or not loopback
+            or parsed.username
+            or parsed.password
+            or parsed.fragment
+            or parsed.query
+        ):
+            raise ValueError(
+                "HTTP upstream requires a literal loopback http URL without credentials/query"
+            )
         self.host = parsed.hostname
         self.port = parsed.port or 80
         self.path = parsed.path or "/mcp"
@@ -56,8 +64,11 @@ class JsonHttpClient:
         timer = threading.Timer(self.timeout, expire)
         timer.daemon = True
         timer.start()
-        headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
-                   "MCP-Protocol-Version": PROTOCOL_VERSION}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "MCP-Protocol-Version": PROTOCOL_VERSION,
+        }
         if self.session:
             headers["MCP-Session-Id"] = self.session
         try:
@@ -96,14 +107,25 @@ class JsonHttpClient:
 
     def request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         self.counter += 1
-        raw = self._post({"jsonrpc": "2.0", "id": self.counter, "method": method,
-                          **({"params": params} if params is not None else {})})
+        raw = self._post(
+            {
+                "jsonrpc": "2.0",
+                "id": self.counter,
+                "method": method,
+                **({"params": params} if params is not None else {}),
+            }
+        )
         return decode_response(raw, self.counter)
 
     def initialize(self) -> dict[str, Any]:
-        response = self.request("initialize", {"protocolVersion": PROTOCOL_VERSION,
-                                               "capabilities": {},
-                                               "clientInfo": {"name": "mcp-faultlab", "version": "0.1.0"}})
+        response = self.request(
+            "initialize",
+            {
+                "protocolVersion": PROTOCOL_VERSION,
+                "capabilities": {},
+                "clientInfo": {"name": "mcp-faultlab", "version": "0.1.0"},
+            },
+        )
         if response.get("protocolVersion") != PROTOCOL_VERSION:
             raise TransportError("unsupported_protocol_version")
         self._post({"jsonrpc": "2.0", "method": "notifications/initialized"})

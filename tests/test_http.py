@@ -29,7 +29,9 @@ def endpoint():
             result = {"protocolVersion": version} if method == "initialize" else {"ok": True}
             body = json.dumps({"jsonrpc": "2.0", "id": message["id"], "result": result}).encode()
             self.send_response(200)
-            self.send_header("Content-Type", "text/event-stream" if method == "sse" else "application/json")
+            self.send_header(
+                "Content-Type", "text/event-stream" if method == "sse" else "application/json"
+            )
             self.send_header("MCP-Session-Id", "test-session")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -72,9 +74,16 @@ def test_http_deadline(endpoint):
     assert time.monotonic() - start < 1
 
 
-@pytest.mark.parametrize("url", ["https://example.com/mcp", "http://localhost:3/mcp",
-                                "http://192.0.2.1/mcp", "http://u:p@127.0.0.1/mcp",
-                                "http://127.0.0.1/mcp?secret=x"])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/mcp",
+        "http://localhost:3/mcp",
+        "http://192.0.2.1/mcp",
+        "http://u:p@127.0.0.1/mcp",
+        "http://127.0.0.1/mcp?secret=x",
+    ],
+)
 def test_only_literal_loopback_without_credentials(url):
     with pytest.raises(ValueError):
         JsonHttpClient(url)

@@ -25,14 +25,21 @@ def decode_response(raw: bytes, request_id: int | str) -> dict[str, Any]:
         message = loads(raw)
     except (ValueError, UnicodeError) as exc:
         raise TransportError("invalid_json_response") from exc
-    if (not isinstance(message, dict) or message.get("jsonrpc") != "2.0"
-        or type(message.get("id")) not in (str, int) or message["id"] != request_id
-        or ("result" in message) == ("error" in message)):
+    if (
+        not isinstance(message, dict)
+        or message.get("jsonrpc") != "2.0"
+        or type(message.get("id")) not in (str, int)
+        or message["id"] != request_id
+        or ("result" in message) == ("error" in message)
+    ):
         raise TransportError("invalid_response_envelope_or_id")
     if "error" in message:
         error = message["error"]
-        if (not isinstance(error, dict) or type(error.get("code")) is not int
-            or not isinstance(error.get("message"), str)):
+        if (
+            not isinstance(error, dict)
+            or type(error.get("code")) is not int
+            or not isinstance(error.get("message"), str)
+        ):
             raise TransportError("invalid_error_response")
         raise ProtocolError(error)
     if not isinstance(message["result"], dict):
@@ -57,8 +64,13 @@ class StdioClient:
         if not command or any(not isinstance(x, str) or not x for x in command):
             raise ValueError("command must be a nonempty argv list")
         self.timeout = timeout_value(timeout)
-        self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=subprocess.DEVNULL, bufsize=0)
+        self.process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=0,
+        )
         assert self.process.stdin is not None
         os.set_blocking(self.process.stdin.fileno(), False)
         self.messages: queue.Queue[bytes | Exception] = queue.Queue(maxsize=100)
@@ -113,8 +125,14 @@ class StdioClient:
 
     def request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         self.counter += 1
-        self._send({"jsonrpc": "2.0", "id": self.counter, "method": method,
-                    **({"params": params} if params is not None else {})})
+        self._send(
+            {
+                "jsonrpc": "2.0",
+                "id": self.counter,
+                "method": method,
+                **({"params": params} if params is not None else {}),
+            }
+        )
         deadline = time.monotonic() + self.timeout
         for _ in range(100):
             try:
@@ -122,8 +140,12 @@ class StdioClient:
                 if isinstance(item, Exception):
                     raise item
                 message = loads(item)
-                if (isinstance(message, dict) and message.get("jsonrpc") == "2.0"
-                    and "method" in message and "id" not in message):
+                if (
+                    isinstance(message, dict)
+                    and message.get("jsonrpc") == "2.0"
+                    and "method" in message
+                    and "id" not in message
+                ):
                     continue  # bounded unsolicited notifications, not tool responses
                 return decode_response(item, self.counter)
             except queue.Empty as exc:
@@ -140,9 +162,14 @@ class StdioClient:
         raise TransportError("too_many_upstream_notifications")
 
     def initialize(self) -> dict[str, Any]:
-        response = self.request("initialize", {"protocolVersion": PROTOCOL_VERSION,
-                                               "capabilities": {},
-                                               "clientInfo": {"name": "mcp-faultlab", "version": "0.1.0"}})
+        response = self.request(
+            "initialize",
+            {
+                "protocolVersion": PROTOCOL_VERSION,
+                "capabilities": {},
+                "clientInfo": {"name": "mcp-faultlab", "version": "0.1.0"},
+            },
+        )
         if response.get("protocolVersion") != PROTOCOL_VERSION:
             self.close()
             raise TransportError("unsupported_protocol_version")

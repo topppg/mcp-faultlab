@@ -6,9 +6,9 @@ import json
 from typing import Any, BinaryIO
 
 from .engine import Harness, ProtocolError
+from .http_transport import JsonHttpClient
 from .jsonutil import loads
 from .ledger import TOOLS, Ledger
-from .http_transport import JsonHttpClient
 from .model import Call
 from .scenario import Scenario
 from .transport import MAX_FRAME_BYTES, PROTOCOL_VERSION, StdioClient
@@ -30,9 +30,12 @@ class ToolEndpoint:
         self.ready = False
 
     def handle(self, message: Any) -> dict[str, Any] | None:
-        if (not isinstance(message, dict) or message.get("jsonrpc") != "2.0"
+        if (
+            not isinstance(message, dict)
+            or message.get("jsonrpc") != "2.0"
             or not isinstance(message.get("method"), str)
-            or ("id" in message and type(message["id"]) not in (int, str))):
+            or ("id" in message and type(message["id"]) not in (int, str))
+        ):
             return rpc_error(None, -32600, "Invalid JSON-RPC request")
         method = message["method"]
         request_id = message.get("id")
@@ -52,19 +55,28 @@ class ToolEndpoint:
                 if self.upstream:
                     self.upstream.initialize()
                 self.initialized = True
-                result = {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {}},
-                          "serverInfo": {"name": "mcp-faultlab", "version": "0.1.0"}}
+                result = {
+                    "protocolVersion": PROTOCOL_VERSION,
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "mcp-faultlab", "version": "0.1.0"},
+                }
             elif method == "ping":
                 result = {}
             elif not self.ready:
-                return rpc_error(request_id, -32002, "Initialize and send notifications/initialized first")
+                return rpc_error(
+                    request_id, -32002, "Initialize and send notifications/initialized first"
+                )
             elif method == "tools/list":
-                result = (self.upstream.request(method, params) if self.upstream
-                          else {"tools": TOOLS})
+                result = (
+                    self.upstream.request(method, params) if self.upstream else {"tools": TOOLS}
+                )
             elif method == "tools/call":
-                if (not isinstance(params.get("name"), str)
-                    or not isinstance(params.get("arguments", {}), dict)):
-                    return rpc_error(request_id, -32602, "tools/call requires name and object arguments")
+                if not isinstance(params.get("name"), str) or not isinstance(
+                    params.get("arguments", {}), dict
+                ):
+                    return rpc_error(
+                        request_id, -32602, "tools/call requires name and object arguments"
+                    )
                 if not self.upstream and params["name"] not in {t["name"] for t in TOOLS}:
                     return rpc_error(request_id, -32602, "Unknown tool")
                 arguments = params.get("arguments", {})

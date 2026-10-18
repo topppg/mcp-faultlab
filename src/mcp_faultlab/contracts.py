@@ -10,8 +10,18 @@ from .trace import canonical
 
 
 def validate_contracts(raw: Any) -> dict[str, Any]:
-    d = fields(raw, {"allowed_tools", "side_effect_tools", "require_approval", "max_retries",
-                     "max_calls", "max_elapsed_ms"}, "contracts")
+    d = fields(
+        raw,
+        {
+            "allowed_tools",
+            "side_effect_tools",
+            "require_approval",
+            "max_retries",
+            "max_calls",
+            "max_elapsed_ms",
+        },
+        "contracts",
+    )
     for key in ("allowed_tools", "side_effect_tools"):
         if key in d:
             if not isinstance(d[key], list):
@@ -62,10 +72,14 @@ def evaluate(events: list[dict[str, Any]], contracts: dict[str, Any]) -> list[di
             dispatches[call["id"]] += 1
             if dispatches[call["id"]] > 1:
                 fail("duplicate_dispatch", event, "One logical call was dispatched more than once")
-            if (d.get("require_approval", False)
+            if (
+                d.get("require_approval", False)
                 and call["tool"] in d.get("side_effect_tools", [])
-                and binding(call) not in approvals):
-                fail("approval_missing", event, "No prior approval for this operation and arguments")
+                and binding(call) not in approvals
+            ):
+                fail(
+                    "approval_missing", event, "No prior approval for this operation and arguments"
+                )
     if events and "max_elapsed_ms" in d and events[-1]["time_ms"] > d["max_elapsed_ms"]:
         fail("time_budget", events[-1], "Injected virtual elapsed budget exceeded")
     return violations

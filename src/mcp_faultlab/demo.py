@@ -13,19 +13,38 @@ from .trace import make_trace
 
 
 def default_scenario() -> Scenario:
-    return Scenario.parse({"schema_version": 1, "name": "confirmation-lost-after-charge",
-                           "rules": [{"name": "lose-first-confirmation", "tool": "ledger.charge",
-                                      "fault": "response_loss", "delay_ms": 250}],
-                           "contracts": {"allowed_tools": ["ledger.charge", "ledger.lookup"],
-                                         "side_effect_tools": ["ledger.charge"],
-                                         "require_approval": True, "max_retries": 1,
-                                         "max_calls": 3, "max_elapsed_ms": 1000}})
+    return Scenario.parse(
+        {
+            "schema_version": 1,
+            "name": "confirmation-lost-after-charge",
+            "rules": [
+                {
+                    "name": "lose-first-confirmation",
+                    "tool": "ledger.charge",
+                    "fault": "response_loss",
+                    "delay_ms": 250,
+                }
+            ],
+            "contracts": {
+                "allowed_tools": ["ledger.charge", "ledger.lookup"],
+                "side_effect_tools": ["ledger.charge"],
+                "require_approval": True,
+                "max_retries": 1,
+                "max_calls": 3,
+                "max_elapsed_ms": 1000,
+            },
+        }
+    )
 
 
 def _entry_valid(entry: Any) -> bool:
-    return (isinstance(entry, dict) and entry.get("operation") == "order-001"
-            and type(entry.get("amount")) is int and entry["amount"] == 100
-            and isinstance(entry.get("id"), str))
+    return (
+        isinstance(entry, dict)
+        and entry.get("operation") == "order-001"
+        and type(entry.get("amount")) is int
+        and entry["amount"] == 100
+        and isinstance(entry.get("id"), str)
+    )
 
 
 def _confirmed(outcome: Outcome) -> bool:
@@ -54,29 +73,40 @@ def run_demo(strategy: str = "safe", scenario: Scenario | None = None) -> dict[s
 
     first = invoke("ledger.charge", arguments)
     completed = _confirmed(first)
-    terminal = (first.failure == "transport_closed" or
-                (first.result is not None and first.result.get("isError") and
-                 first.result.get("structuredContent", {}).get("code") == "permission_denied"))
+    terminal = first.failure == "transport_closed" or (
+        first.result is not None
+        and first.result.get("isError")
+        and first.result.get("structuredContent", {}).get("code") == "permission_denied"
+    )
     if not completed and not terminal:
         if strategy == "safe" and (first.uncertain or first.ok):
             lookup = invoke("ledger.lookup", {"operation": "order-001"})
             data = lookup.result.get("structuredContent") if lookup.ok else None
             entries = data.get("entries") if isinstance(data, dict) else None
-            completed = (isinstance(entries, list) and len(entries) == 1
-                         and _entry_valid(entries[0]))
+            completed = isinstance(entries, list) and len(entries) == 1 and _entry_valid(entries[0])
         if not completed:
             completed = _confirmed(invoke("ledger.charge", arguments))
     trace = make_trace(harness)
     violations = evaluate(harness.events, scenario.contracts)
     snapshot = ledger.snapshot()
-    metrics = {"calls": counter, "dispatches": sum(e["kind"] == "dispatch" for e in harness.events),
-               "virtual_elapsed_ms": harness.clock.now_ms, "completed": completed,
-               "side_effects": snapshot["side_effects"],
-               "duplicate_effects": snapshot["duplicate_effects"],
-               "contract_violations": len(violations)}
-    return {"scenario": scenario.name, "strategy": strategy, "metrics": metrics,
-            "passed": completed and not violations and snapshot["duplicate_effects"] == 0,
-            "violations": violations, "ledger": snapshot, "trace": trace}
+    metrics = {
+        "calls": counter,
+        "dispatches": sum(e["kind"] == "dispatch" for e in harness.events),
+        "virtual_elapsed_ms": harness.clock.now_ms,
+        "completed": completed,
+        "side_effects": snapshot["side_effects"],
+        "duplicate_effects": snapshot["duplicate_effects"],
+        "contract_violations": len(violations),
+    }
+    return {
+        "scenario": scenario.name,
+        "strategy": strategy,
+        "metrics": metrics,
+        "passed": completed and not violations and snapshot["duplicate_effects"] == 0,
+        "violations": violations,
+        "ledger": snapshot,
+        "trace": trace,
+    }
 
 
 def compare(scenario: Scenario | None = None) -> dict[str, Any]:
