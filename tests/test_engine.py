@@ -41,3 +41,27 @@ def test_pre_execution_timeout_and_unique_ids():
     assert h.backend.calls == 0
     with pytest.raises(ValueError, match="duplicate"):
         h.invoke(Call("1", "write"))
+
+
+def test_malformed_content_keeps_json_envelope_and_executes_once():
+    h = harness("malformed")
+    outcome = h.invoke(Call("1", "read"))
+    assert isinstance(outcome.result, dict)
+    assert isinstance(outcome.result["structuredContent"], list)
+    assert h.backend.calls == 1
+
+
+def test_stale_uses_previous_pristine_result_without_mutation():
+    h = harness("stale", occurrence=2)
+    first = h.invoke(Call("1", "read"))
+    first.result["content"][0]["text"] = "caller mutated"
+    stale = h.invoke(Call("2", "read"))
+    assert stale.result["content"][0]["text"] == "ok"
+    assert h.backend.calls == 2
+
+
+def test_stale_without_snapshot_is_explicit_failure():
+    h = harness("stale")
+    result = h.invoke(Call("1", "read"))
+    assert result.failure == "no_stale_result_available"
+    assert h.backend.calls == 1

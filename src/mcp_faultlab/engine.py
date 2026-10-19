@@ -42,6 +42,7 @@ class Harness:
         self.clock = VirtualClock()
         self.events: list[dict[str, Any]] = []
         self.ids: set[str] = set()
+        self.previous: dict[str, dict[str, Any]] = {}
 
     def emit(self, kind: str, **data: Any) -> None:
         self.events.append({"seq": len(self.events), "time_ms": self.clock.now_ms,
@@ -61,6 +62,20 @@ class Harness:
                                                 retry_after_ms=rule.delay_ms))
         elif rule and rule.fault == "timeout":
             outcome = Outcome(failure="timeout", uncertain=False)
+        elif rule and rule.fault in {"malformed", "stale"}:
+            old = copy.deepcopy(self.previous.get(call.tool))
+            outcome = self._execute(call)
+            if outcome.result is not None:
+                result = copy.deepcopy(outcome.result)
+                if rule.fault == "malformed":
+                    result["structuredContent"] = ["invalid: expected a JSON object"]
+                    outcome = Outcome(result=result)
+                elif isinstance(rule.value, dict):
+                    outcome = Outcome(result=copy.deepcopy(rule.value))
+                elif old is not None:
+                    outcome = Outcome(result=old)
+                else:
+                    outcome = Outcome(failure="no_stale_result_available", uncertain=True)
         elif rule:
             raise NotImplementedError(f"fault not implemented: {rule.fault}")
         else:
@@ -76,4 +91,6 @@ class Harness:
             return Outcome(failure=str(exc), uncertain=True)
         if not isinstance(result, dict):
             return Outcome(failure="invalid_backend_result", uncertain=True)
+        if not result.get("isError", False):
+            self.previous[call.tool] = copy.deepcopy(result)
         return Outcome(result=copy.deepcopy(result))
