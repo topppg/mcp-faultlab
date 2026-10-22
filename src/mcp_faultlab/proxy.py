@@ -6,6 +6,7 @@ import json
 from typing import Any, BinaryIO
 
 from .engine import Harness, ProtocolError
+from .jsonutil import loads
 from .ledger import TOOLS, Ledger
 from .http_transport import JsonHttpClient
 from .model import Call
@@ -94,7 +95,7 @@ def serve(endpoint: ToolEndpoint, source: BinaryIO, sink: BinaryIO) -> None:
         if len(line) > MAX_FRAME_BYTES:
             return  # close, never try to resynchronize a truncated frame
         try:
-            message = json.loads(line)
+            message = loads(line)
         except (ValueError, UnicodeError):
             response = rpc_error(None, -32700, "Invalid JSON")
         else:

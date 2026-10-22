@@ -9,6 +9,8 @@ import sys
 from .proxy import ToolEndpoint, serve
 from .http_transport import JsonHttpClient
 from .report import summarize_trace, write_reports
+from .demo import compare, run_demo
+from .suite import run_suite
 from .scenario import Scenario
 from .trace import make_trace, read_trace, write_trace
 from .transport import PROTOCOL_VERSION, StdioClient
@@ -19,6 +21,13 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="action", required=True)
     commands.add_parser("doctor", help="Print offline capability and runtime information")
     commands.add_parser("reference-server", help="Serve the synthetic in-memory ledger over stdio")
+    demo = commands.add_parser("demo", help="Run synthetic naive/safe recovery strategies")
+    demo.add_argument("--strategy", choices=["safe", "naive", "compare"], default="compare")
+    demo.add_argument("--scenario")
+    demo.add_argument("--out", required=True)
+    suite = commands.add_parser("suite", help="Run a JSON scenario plan with explicit expectations")
+    suite.add_argument("plan")
+    suite.add_argument("--out", required=True)
     report = commands.add_parser("report", help="Audit a captured trace and write portable reports")
     report.add_argument("--trace", required=True)
     report.add_argument("--out", required=True)
@@ -36,6 +45,25 @@ def main(argv: list[str] | None = None) -> int:
                               "transport_scope": "sequential stdio tools subset"}))
         elif args.action == "reference-server":
             serve(ToolEndpoint(Scenario("reference-ledger")), sys.stdin.buffer, sys.stdout.buffer)
+        elif args.action == "demo":
+            scenario = Scenario.load(args.scenario) if args.scenario else None
+            if args.strategy == "compare":
+                from pathlib import Path
+
+                comparison = compare(scenario)
+                for strategy, report in comparison.items():
+                    write_reports(report, Path(args.out) / strategy)
+                print(json.dumps({k: {"passed": v["passed"], "metrics": v["metrics"]}
+                                  for k, v in comparison.items()}))
+            else:
+                report = run_demo(args.strategy, scenario)
+                write_reports(report, args.out)
+                print(json.dumps({"passed": report["passed"], "metrics": report["metrics"]}))
+                return 0 if report["passed"] else 1
+        elif args.action == "suite":
+            result = run_suite(args.plan, args.out)
+            print(json.dumps(result))
+            return 0 if result["passed"] else 1
         elif args.action == "report":
             report = summarize_trace(read_trace(args.trace))
             write_reports(report, args.out)

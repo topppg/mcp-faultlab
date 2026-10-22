@@ -13,6 +13,7 @@ import time
 from typing import Any
 
 from .engine import ProtocolError, TransportError
+from .jsonutil import loads
 from .model import Call
 
 PROTOCOL_VERSION = "2025-11-25"
@@ -21,7 +22,7 @@ MAX_FRAME_BYTES = 1_048_576
 
 def decode_response(raw: bytes, request_id: int | str) -> dict[str, Any]:
     try:
-        message = json.loads(raw)
+        message = loads(raw)
     except (ValueError, UnicodeError) as exc:
         raise TransportError("invalid_json_response") from exc
     if (not isinstance(message, dict) or message.get("jsonrpc") != "2.0"
@@ -120,7 +121,7 @@ class StdioClient:
                 item = self.messages.get(timeout=max(0, deadline - time.monotonic()))
                 if isinstance(item, Exception):
                     raise item
-                message = json.loads(item)
+                message = loads(item)
                 if (isinstance(message, dict) and message.get("jsonrpc") == "2.0"
                     and "method" in message and "id" not in message):
                     continue  # bounded unsolicited notifications, not tool responses

@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .scenario import Rule, Scenario, ScenarioError, string
+from .jsonutil import validate_value
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,7 @@ class Call:
             string(getattr(self, key), f"call.{key}")
         if not isinstance(self.arguments, dict):
             raise ScenarioError("call.arguments must be an object")
+        validate_value(self.arguments)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

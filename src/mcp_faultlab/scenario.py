@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from .jsonutil import loads, validate_value
 
 FAULTS = frozenset(
     {
@@ -35,10 +36,6 @@ def string(value: Any, where: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ScenarioError(f"{where}: expected nonempty string")
     return value
-
-
-def reject_constant(value: str) -> None:
-    raise ScenarioError(f"non-finite JSON number: {value}")
 
 
 @dataclass(frozen=True)
@@ -74,6 +71,7 @@ class Scenario:
 
     @classmethod
     def parse(cls, raw: Any) -> Scenario:
+        validate_value(raw)
         d = fields(raw, {"schema_version", "name", "rules", "contracts"}, "scenario")
         if type(d.get("schema_version")) is not int or d["schema_version"] != 1:
             raise ScenarioError("schema_version must be 1")
@@ -94,6 +92,6 @@ class Scenario:
     @classmethod
     def load(cls, path: str | Path) -> Scenario:
         try:
-            return cls.parse(json.loads(Path(path).read_text(), parse_constant=reject_constant))
-        except json.JSONDecodeError as exc:
-            raise ScenarioError(f"invalid scenario JSON: {exc.msg}") from exc
+            return cls.parse(loads(Path(path).read_text()))
+        except ValueError as exc:
+            raise ScenarioError(f"invalid scenario JSON: {exc}") from exc

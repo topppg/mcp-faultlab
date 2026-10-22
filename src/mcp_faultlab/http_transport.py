@@ -42,12 +42,13 @@ class JsonHttpClient:
             raise ValueError("request_frame_too_large")
         connection = http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
         expired = threading.Event()
+        connected_socket: list[socket.socket] = []
 
         def expire() -> None:
             expired.set()
-            if connection.sock is not None:
+            for active_socket in connected_socket:
                 try:
-                    connection.sock.shutdown(socket.SHUT_RDWR)
+                    active_socket.shutdown(socket.SHUT_RDWR)
                 except OSError:
                     pass
             connection.close()
@@ -60,6 +61,11 @@ class JsonHttpClient:
         if self.session:
             headers["MCP-Session-Id"] = self.session
         try:
+            connection.connect()
+            assert connection.sock is not None
+            connected_socket.append(connection.sock)
+            if expired.is_set():
+                raise TransportError("http_deadline_outcome_unknown")
             connection.request("POST", self.path, body=body, headers=headers)
             response = connection.getresponse()
             if response.status == 202 and "id" not in message:

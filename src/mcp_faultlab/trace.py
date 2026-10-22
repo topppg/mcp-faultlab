@@ -10,6 +10,7 @@ from typing import Any
 
 from .engine import Harness, Outcome
 from .model import Call
+from .jsonutil import loads
 
 
 def canonical(value: Any) -> str:
@@ -73,7 +74,7 @@ def read_trace(path: str | Path, max_bytes: int = 10_000_000) -> dict[str, Any]:
         data = handle.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise ValueError("trace exceeds size limit")
-    return validate_trace(json.loads(data))
+    return validate_trace(loads(data))
 
 
 class Replay:

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "name": "synthetic-permission_denied",
+  "rules": [
+    {
+      "name": "first-permission_denied",
+      "tool": "ledger.charge",
+      "fault": "permission_denied",
+      "delay_ms": 0
+    }
+  ],
+  "contracts": {
+    "allowed_tools": [
+      "ledger.charge",
+      "ledger.lookup"
+    ],
+    "side_effect_tools": [
+      "ledger.charge"
+    ],
+    "require_approval": true,
+    "max_retries": 1,
+    "max_calls": 3,
+    "max_elapsed_ms": 1000
+  }
+}

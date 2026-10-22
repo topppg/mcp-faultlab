@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "name": "synthetic-recovery-controls",
+  "cases": [
+    {
+      "name": "response_loss-naive",
+      "scenario": "response_loss.json",
+      "strategy": "naive",
+      "expect_pass": false
+    },
+    {
+      "name": "response_loss-safe",
+      "scenario": "response_loss.json",
+      "strategy": "safe",
+      "expect_pass": true
+    },
+    {
+      "name": "timeout-naive",
+      "scenario": "timeout.json",
+      "strategy": "naive",
+      "expect_pass": true
+    },
+    {
+      "name": "timeout-safe",
+      "scenario": "timeout.json",
+      "strategy": "safe",
+      "expect_pass": true
+    },
+    {
+      "name": "rate_limit-naive",
+      "scenario": "rate_limit.json",
+      "strategy": "naive",
+      "expect_pass": true
+    },
+    {
+      "name": "rate_limit-safe",
+      "scenario": "rate_limit.json",
+      "strategy": "safe",
+      "expect_pass": true
+    },
+    {
+      "name": "tool_error-naive",
+      "scenario": "tool_error.json",
+      "strategy": "naive",
+      "expect_pass": true
+    },
+    {
+      "name": "tool_error-safe",
+      "scenario": "tool_error.json",
+      "strategy": "safe",
+      "expect_pass": true
+    },
+    {
+      "name": "permission_denied-naive",
+      "scenario": "permission_denied.json",
+      "strategy": "naive",
+      "expect_pass": false
+    },
+    {
+      "name": "permission_denied-safe",
+      "scenario": "permission_denied.json",
+      "strategy": "safe",
+      "expect_pass": false
+    },
+    {
+      "name": "malformed-naive",
+      "scenario": "malformed.json",
+      "strategy": "naive",
+      "expect_pass": false
+    },
+    {
+      "name": "malformed-safe",
+      "scenario": "malformed.json",
+      "strategy": "safe",
+      "expect_pass": true
+    },
+    {
+      "name": "stale-naive",
+      "scenario": "stale.json",
+      "strategy": "naive",
+      "expect_pass": false
+    },
+    {
+      "name": "stale-safe",
+      "scenario": "stale.json",
+      "strategy": "safe",
+      "expect_pass": true
+    },
+    {
+      "name": "duplicate_execution-naive",
+      "scenario": "duplicate_execution.json",
+      "strategy": "naive",
+      "expect_pass": false
+    },
+    {
+      "name": "duplicate_execution-safe",
+      "scenario": "duplicate_execution.json",
+      "strategy": "safe",
+      "expect_pass": false
+    },
+    {
+      "name": "crash-naive",
+      "scenario": "crash.json",
+      "strategy": "naive",
+      "expect_pass": false
+    },
+    {
+      "name": "crash-safe",
+      "scenario": "crash.json",
+      "strategy": "safe",
+      "expect_pass": false
+    }
+  ]
+}
