@@ -7,6 +7,7 @@ import json
 import sys
 
 from .proxy import ToolEndpoint, serve
+from .http_transport import JsonHttpClient
 from .scenario import Scenario
 from .trace import make_trace, write_trace
 from .transport import PROTOCOL_VERSION, StdioClient
@@ -21,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     proxy.add_argument("--scenario", required=True)
     proxy.add_argument("--trace", required=True)
     proxy.add_argument("--timeout", type=float, default=5.0)
+    proxy.add_argument("--http-url", help="Loopback JSON POST upstream; SSE is unsupported")
     proxy.add_argument("command", nargs=argparse.REMAINDER, help="-- followed by upstream argv")
     args = parser.parse_args(argv)
     try:
@@ -33,7 +35,11 @@ def main(argv: list[str] | None = None) -> int:
         elif args.action == "proxy":
             scenario = Scenario.load(args.scenario)
             command = args.command[1:] if args.command[:1] == ["--"] else args.command
-            with StdioClient(command, timeout=args.timeout) as upstream:
+            if bool(command) == bool(args.http_url):
+                raise ValueError("select exactly one upstream: argv after -- or --http-url")
+            transport = (JsonHttpClient(args.http_url, timeout=args.timeout) if args.http_url
+                         else StdioClient(command, timeout=args.timeout))
+            with transport as upstream:
                 endpoint = ToolEndpoint(scenario, upstream)
                 try:
                     serve(endpoint, sys.stdin.buffer, sys.stdout.buffer)
