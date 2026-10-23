@@ -37,8 +37,11 @@ class Outcome:
 
 
 def tool_error(code: str, message: str, **data: Any) -> dict[str, Any]:
-    return {"content": [{"type": "text", "text": message}], "isError": True,
-            "structuredContent": {"code": code, **data}}
+    return {
+        "content": [{"type": "text", "text": message}],
+        "isError": True,
+        "structuredContent": {"code": code, **data},
+    }
 
 
 class Harness:
@@ -53,8 +56,14 @@ class Harness:
         self.crashed = False
 
     def emit(self, kind: str, **data: Any) -> None:
-        self.events.append({"seq": len(self.events), "time_ms": self.clock.now_ms,
-                            "kind": kind, **copy.deepcopy(data)})
+        self.events.append(
+            {
+                "seq": len(self.events),
+                "time_ms": self.clock.now_ms,
+                "kind": kind,
+                **copy.deepcopy(data),
+            }
+        )
 
     def approve(self, call: Call) -> None:
         """Record an approval from the trusted test driver, bound to exact arguments."""
@@ -75,8 +84,11 @@ class Harness:
             self.crashed = True
             outcome = Outcome(failure="transport_closed", uncertain=False)
         elif rule and rule.fault in {"tool_error", "permission_denied", "rate_limit"}:
-            outcome = Outcome(result=tool_error(rule.fault, f"Injected {rule.fault}",
-                                                retry_after_ms=rule.delay_ms))
+            outcome = Outcome(
+                result=tool_error(
+                    rule.fault, f"Injected {rule.fault}", retry_after_ms=rule.delay_ms
+                )
+            )
         elif rule and rule.fault == "timeout":
             outcome = Outcome(failure="timeout", uncertain=False)
         elif rule and rule.fault in {"malformed", "stale"}:

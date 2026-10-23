@@ -23,8 +23,12 @@ def test_wrong_response_id_is_never_accepted():
 
 def test_protocol_error_is_distinct_from_tool_execution_error():
     with pytest.raises(ProtocolError) as raised:
-        decode_response(json.dumps({"jsonrpc": "2.0", "id": 1,
-                                    "error": {"code": -32601, "message": "unknown"}}).encode(), 1)
+        decode_response(
+            json.dumps(
+                {"jsonrpc": "2.0", "id": 1, "error": {"code": -32601, "message": "unknown"}}
+            ).encode(),
+            1,
+        )
     assert raised.value.error["code"] == -32601
     assert decode_response(b'{"jsonrpc":"2.0","id":1,"result":{"isError":true}}', 1)["isError"]
 

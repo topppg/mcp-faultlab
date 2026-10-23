@@ -53,3 +53,31 @@ def test_trace_size_limit(tmp_path):
     path.write_text("x" * 101)
     with pytest.raises(ValueError, match="size"):
         read_trace(path, max_bytes=100)
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        {"kind": "dispatch", "call_id": "unknown"},
+        {"kind": "dispatch", "call_id": []},
+        {"kind": "invented"},
+        {"kind": ["not-a-kind"]},
+        {"kind": "approval", "call": []},
+    ],
+)
+def test_rehashed_invalid_trace_events_are_rejected(event):
+    body = {
+        "trace_version": 1,
+        "scenario": {"name": "untrusted", "rules": [], "contracts": {}},
+        "events": [{"seq": 0, "time_ms": 0, **event}],
+    }
+    with pytest.raises(ValueError):
+        validate_trace({**body, "sha256": digest(body)})
+
+
+def test_invalid_outcome_payload_rejected_even_with_valid_hash():
+    trace = record()
+    trace["events"][-1]["outcome"]["result"] = []
+    trace["sha256"] = digest({k: v for k, v in trace.items() if k != "sha256"})
+    with pytest.raises(ValueError, match="outcome"):
+        validate_trace(trace)

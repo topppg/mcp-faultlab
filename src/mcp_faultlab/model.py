@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from .scenario import Rule, Scenario, ScenarioError, string
 from .jsonutil import validate_value
+from .scenario import Rule, Scenario, ScenarioError, string
 
 
 @dataclass(frozen=True)
@@ -57,10 +57,15 @@ class Matcher:
         self.counts[call.tool] = self.counts.get(call.tool, 0) + 1
         for rule in self.scenario.rules:
             occurrence = self.total if rule.tool == "*" else self.counts[call.tool]
-            if (rule.name not in self.fired and rule.tool in ("*", call.tool)
+            if (
+                rule.name not in self.fired
+                and rule.tool in ("*", call.tool)
                 and occurrence == rule.occurrence
-                and all(k in call.arguments and call.arguments[k] == v
-                        for k, v in rule.arguments.items())):
+                and all(
+                    k in call.arguments and call.arguments[k] == v
+                    for k, v in rule.arguments.items()
+                )
+            ):
                 self.fired.add(rule.name)
                 return rule
         return None

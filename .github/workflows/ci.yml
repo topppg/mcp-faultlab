@@ -1,0 +1,31 @@
+name: validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install uv==0.9.7
+      - run: uv sync --frozen --extra compatibility
+      - run: uv run --frozen --extra compatibility ruff check .
+      - run: uv run --frozen --extra compatibility ruff format --check .
+      - run: uv run --frozen --extra compatibility pytest -q
+      - run: uv run --frozen --extra compatibility mcp-faultlab suite examples/suite.json --out reports/ci
+      - run: uv build

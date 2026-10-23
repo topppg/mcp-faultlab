@@ -15,9 +15,16 @@ class Counter:
 
 
 def harness(fault, **kwargs):
-    return Harness(Scenario.parse({"schema_version": 1, "name": "injection", "rules": [
-        {"name": "first", "fault": fault, **kwargs}
-    ]}), Counter())
+    return Harness(
+        Scenario.parse(
+            {
+                "schema_version": 1,
+                "name": "injection",
+                "rules": [{"name": "first", "fault": fault, **kwargs}],
+            }
+        ),
+        Counter(),
+    )
 
 
 @pytest.mark.parametrize("fault", ["tool_error", "permission_denied", "rate_limit"])
